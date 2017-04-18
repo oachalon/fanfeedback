@@ -7,6 +7,37 @@
 ; PIC16F877, 8MHz Oscillator, 12VDC 4 Wire Fan, LCD Display
 ;**********************************************************
 
+;
+;                         PIC16F877
+;                 +----------:_:----------+
+;   S1  VPP ->  1 : MCLR/VPP      PGD/RB7 : 40 <> PGD
+;           <>  2 : RA0/AN0       PGC/RB6 : 39 <> PGC
+; 0-5V Tach ->  3 : RA1               RB5 : 38 <>
+;           <>  4 : RA2               RB4 : 37 <>
+;           <>  5 : RA3           PGM/RB3 : 36 <>    
+;   S2      ->  6 : RA4               RB2 : 35 <>    
+;           <>  7 : RA5               RB1 : 34 <>   
+;           <>  8 : RE0               RB0 : 33 <> 
+;           <>  9 : RE1               VDD : 32 <- PWR
+;           <> 10 : RE2               VSS : 31 <- GND
+;       PWR -> 11 : VDD               RD7 : 30 -> LCD_E
+;       GND -> 12 : VSS               RD6 : 29 -> LCD_RW
+; 8MHz OSC  -> 13 : OSC1              RD5 : 28 <> 
+;           <> 14 : OSC2              RD4 : 27 -> LCD_RS
+;           <> 15 : RC0/T1CKI   RX/DT/RC7 : 26 <- RXD
+;PWM FAN    <- 16 : RC1/CCP2    TX/CK/RC6 : 25 -> TXD
+;           <> 17 : RC2/CCP1          RC5 : 24 <>
+;       SCL <> 18 : RC3/SCL       SDA/RC4 : 23 <> 
+;    LCD_D4 <> 19 : RD0               RD3 : 22 <> LCD_D7
+;    LCD_D5 <> 20 : RD1               RD2 : 21 <> LCD_D6
+;                 +-----------------------:
+;                          DIP-40
+;
+
+
+
+
+
 	list 	p=16f877
 	include "p16f877.inc"
 	
