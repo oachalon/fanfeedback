@@ -148,14 +148,6 @@ Text
 ;====================================== MAIN PROGRAM ===================================
 Main
  	call Init ; Intialization
- ;Call Message
-
-GetSpeed 
-	call SERIALSCAN ; Get data for reference speed
- 	movf REFERENCE,W
- 	sublw 0X00
- 	btfsc STATUS,Z ; Reference speed = 0?
-goto GetSpeed ; Yes. Get data again
 
 ;------------------------------- TACHOMETER INPUT INTO PORTA,1 -----------------------------------------
 SpeedLoop 
@@ -223,10 +215,10 @@ Init
 
 ; Timer 1 Setup
 
- 	movlw 0X00
+ 	movlw 0X09
  	banksel TMR1H
  	movwf TMR1H ;Timer= 0000-FFFFH = 65535*8/(8M/4) = 0.26214s Prescale = 8
- 	movlw 0X00
+ 	movlw 0XFF
  	banksel TMR1L
  	movwf TMR1L
 
@@ -273,10 +265,11 @@ SetPorts
 	movwf	LCD_TRIS
 	movwf	TRISD  
 		
-;		banksel LCD_Init
+;	banksel LCD_Init
 
-;		call	LCD_Init		;setup LCD
-;		clrf	count			;set counter register to zero
+;	call	LCD_Init		;setup LCD
+;	clrf	count			;set counter register to zero
+
 
 
 return
@@ -284,19 +277,8 @@ return
 ;######################## END OF INITIALIZATION##########################
 ;^^^^^^^^^^^^^^^^^^^^^^^^ SUBROUTINE^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-;----------Send the detect speed to PC-------------
-SERIAL_TRANSMIT: 
-	banksel PIR1
-	btfss PIR1,TXIF ;Check if data TXREG is transfer to TSR ->TXREG is empty
- 	goto $-1
-	banksel TXREG
-	movwf TXREG
-return
 ;-----------Get data for reference speed -------------------
-SERIALSCAN 
-	banksel PIR1
- 	btfss PIR1,RCIF ;Check if data receive
- 	goto $-1 ;Wait until new data
+Receive 
 	movf RCREG,W ;Get received data to W
 	banksel REFERENCE
 	movwf REFERENCE
@@ -306,12 +288,18 @@ return
 ;*********************** INTERRUPT SERVICE ROUTINE******************************
 ISR
 
+
 push
 
-	banksel PIR1
-	clrf PIR1 ; Clear interruption flag
+SerialReference
+	btfsc PIR1, RCIF
+	call Receive
+	goto GETDATA
 
 GETDATA
+
+	banksel PIR1
+	bcf PIR1, TMR1IF
 	banksel X1 
 	movf X1,W ; Get value of counter,detect speed
 	banksel REFERENCE
@@ -368,12 +356,12 @@ pop
 
 ;		movlw	0x06			;Set display character mode
 ;		call	LCD_Cmd
-
+;;
 ;		movlw	0x0c			;Set display on/off and cursor command
-	;	call	LCD_Cmd			;Set cursor off
-
+;		call	LCD_Cmd			;Set cursor off
+;
 ;		call	LCD_Clr			;clear display
-
+;
 ;		retlw	0x00
 
 ; command set routine
@@ -391,7 +379,7 @@ pop
 ;		bcf	LCD_PORT, LCD_RS	;RS line to 1
 ;		call	Pulse_e			;Pulse the E line high
 ;		call 	LCD_Busy
-;		retlw	0x00
+;		return
 
 
 ;LCD_CharD	
@@ -418,10 +406,10 @@ pop
 ;		retlw	0x00
 
 ;LCD_Line2	
-	;	movlw	0xc0			;move to 2nd row, first column
+;		movlw	0xc0			;move to 2nd row, first column
 ;		call	LCD_Cmd
-	;	retlw	0x00
-
+;		retlw	0x00
+;
 ;LCD_Line1W	
 ;		addlw	0x80			;move to 1st row, column W
 ;		call	LCD_Cmd
@@ -432,27 +420,27 @@ pop
 ;		retlw	0x00
 
 ;LCD_CurOn	movlw	0x0d			;Set display on/off and cursor command
-	;	call	LCD_Cmd
-	;	retlw	0x00
+;		call	LCD_Cmd
+;		retlw	0x00
 
 ;LCD_CurOff	movlw	0x0c			;Set display on/off and cursor command
 ;		call	LCD_Cmd
 ;		retlw	0x00
 
 ;LCD_Clr		movlw	0x01			;Clear display
-	;	call	LCD_Cmd
-	;	retlw	0x00
+;		call	LCD_Cmd
+;		retlw	0x00
 
 ;LCD_HEX		movwf	tmp1
-	;	swapf	tmp1,	w
-	;	andlw	0x0f
-	;	call	HEX_Table
-	;	call	LCD_Char
-	;	movf	tmp1, w
-	;	andlw	0x0f
-	;	call	HEX_Table
-	;	call	LCD_Char
-	;	retlw	0x00
+;		swapf	tmp1,	w
+;		andlw	0x0f
+;		call	HEX_Table
+;		call	LCD_Char
+;		movf	tmp1, w
+;		andlw	0x0f
+;		call	HEX_Table
+;		call	LCD_Char
+;		retlw	0x00
 
 ;Delay255	movlw	0xFF			;delay 255 mS
 ;		goto	d4
@@ -474,11 +462,11 @@ pop
 ;		goto	$+2
 ;		decfsz	countb, f
 ;		goto	Delay_0
-;
+
 ;		decfsz	count1	,f
 ;		goto	d5
 ;		return
-;
+
 ;Pulse_e		bsf	LCD_PORT, LCD_E
 ;		nop
 ;		bcf	LCD_PORT, LCD_E
@@ -514,43 +502,43 @@ pop
 ;Convert:                        ; Takes number in NumH:NumL
                                 ; Returns decimal in
                                 ; TenK:Thou:Hund:Tens:Ones
-
-  ;      swapf   NumH, w
+;
+;        swapf   NumH, w
 ;	iorlw	B'11110000'
- ;       movwf   Thou
- ;       addwf   Thou,f
- ;       addlw   0XE2
- ;       movwf   Hund
+;       movwf   Thou
+;       addwf   Thou,f
+;        addlw   0XE2
+;        movwf   Hund
  ;       addlw   0X32
  ;       movwf   Ones
-
- ;       movf    NumH,w
-  ;      andlw   0X0F
-  ;      addwf   Hund,f
-  ;      addwf   Hund,f
- ;       addwf   Ones,f
- ;       addlw   0XE9
- ;       movwf   Tens
- ;       addwf   Tens,f
-  ;      addwf   Tens,f
-
-   ;     swapf   NumL,w
-   ;     andlw   0X0F
-   ;     addwf   Tens,f
-   ;     addwf   Ones,f
-
-   ;     rlf     Tens,f
-    ;    rlf     Ones,f
-    ;    comf    Ones,f
-   ;     rlf     Ones,f
 ;
-   ;     movf    NumL,w
-    ;    andlw   0X0F
-   ;     addwf   Ones,f
-     ;   rlf     Thou,f
+;        movf    NumH,w
+;        andlw   0X0F
+;        addwf   Hund,f
+;        addwf   Hund,f
+ ;       addwf   Ones,f
+;        addlw   0XE9
+  ;      movwf   Tens
+;        addwf   Tens,f
+ ;       addwf   Tens,f
 
-     ;   movlw   0X07
-     ;   movwf   TenK
+;        swapf   NumL,w
+;        andlw   0X0F
+;        addwf   Tens,f
+;        addwf   Ones,f
+
+;        rlf     Tens,f
+ ;       rlf     Ones,f
+ ;       comf    Ones,f
+  ;      rlf     Ones,f
+;
+;        movf    NumL,w
+ ;      andlw   0X0F
+ ;       addwf   Ones,f
+ ;       rlf     Thou,f
+
+ ;       movlw   0X07
+ ;       movwf   TenK
 
                     ; At this point, the original number is
                     ; equal to
@@ -561,29 +549,29 @@ pop
                     ; needs to be normalized, but this can all be
                     ; done with simple byte arithmetic.
 
-  ;      movlw   0X0A                             ; Ten
+ ;       movlw   0X0A                             ; Ten
 ;Lb1:
-  ;      addwf   Ones,f
-  ;      decf    Tens,f
-  ;      btfss   3,0
-   ;     goto   Lb1
+;        addwf   Ones,f
+;        decf    Tens,f
+;        btfss   3,0
+ ;       goto   Lb1
 ;Lb2:
- ;       addwf   Tens,f
- ;       decf    Hund,f
-  ;      btfss   3,0
-  ;      goto   Lb2
+;        addwf   Tens,f
+ ;;       decf    Hund,f
+ ;       btfss   3,0
+ ;       goto   Lb2
 ;Lb3:
-    ;    addwf   Hund,f
-   ;     decf    Thou,f
-   ;     btfss   3,0
-   ;     goto   Lb3
+;        addwf   Hund,f
+;        decf    Thou,f
+ ;       btfss   3,0
+;        goto   Lb3
 ;Lb4:
-    ;    addwf   Thou,f
-    ;    decf    TenK,f
-    ;    btfss   3,0
-     ;   goto   Lb4
+ ;       addwf   Thou,f
+ ;       decf    TenK,f
+;        btfss   3,0
+;        goto   Lb4
 
-   ;     retlw	0x00
+;        retlw	0x00
 
 ; *****************************         Begin Multiplier Routine
 ;mpy_S   clrf    H_byte
@@ -609,7 +597,7 @@ pop
 ;		call	Text			;get a character from the text table
 ;		xorlw	0x00			;is it a zero?
 ;		btfsc	STATUS, Z
-;;		call	NextMessage
+;		call	NextMessage
 ;		call	LCD_Char
 ;		incf	count, f
 ;		goto	Message
@@ -620,7 +608,7 @@ pop
 ;		call	Convert			;convert to decimal
 ;		movf	TenK,	w		;display decimal characters
 ;		call	LCD_CharD		;using LCD_CharD to convert to ASCII
-;;		movf	Thou,	w
+;		movf	Thou,	w
 ;		call	LCD_CharD
 ;		movf	Hund,	w
 ;		call	LCD_CharD		
@@ -638,11 +626,11 @@ pop
 ;		goto	Next
 ;		incf	NumH,	f
 ;Next	
-;	call	Delay255		;wait so you can see the digits change
-;
+;	call	Delay20		;wait so you can see the digits change
+
 ;	goto	NextMessage
 ;return
-;
+
 
  END
 ;-------------------------------------END OF PROGRAM------------------------------------------------ 
